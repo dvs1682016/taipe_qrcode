@@ -1,15 +1,27 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
+  <!--
+    ====================================================================
+    專案名稱：太平山活動 - 現場報到管理系統 (前端)
+    版本編號：v1.01
+    更新日期：2026/10/23
+    更新摘要：
+      1. 加入系統版本標記 (v1.01)
+      2. 長輩友善高對比、大字級 (18px~28px)、大觸控標靶 (54px+)
+      3. 手機底部固定導航操作列 (單手大拇指易點擊)
+      4. 報到成功自動中文語音朗讀與雙頻震動
+      5. 消除 CORS 阻擋之 text/plain 通訊相容
+    ====================================================================
+  -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>太平山活動 - 現場報到管理系統</title>
+  <title>太平山活動 - 現場報到管理系統 v1.01</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- HTML5-QRCode Scanner Library -->
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <style>
-    /* 湖水綠與高對比長輩友善主題 */
     :root {
       --bg-main: #0d1518;
       --card-bg: #162429;
@@ -23,19 +35,16 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft JhengHei", sans-serif;
       -webkit-tap-highlight-color: transparent;
     }
-    /* 移除 iOS 圓角與陰影干擾 */
     input, button {
       -webkit-appearance: none;
       border-radius: 0.75rem;
     }
-    /* 掃描框攝影機置中適應 */
     #qr-reader video {
       width: 100% !important;
       height: 100% !important;
       object-fit: cover !important;
       border-radius: 1rem;
     }
-    /* 彈窗平滑進出場 */
     .modal-enter {
       animation: popIn 0.25s ease-out forwards;
     }
@@ -47,7 +56,7 @@
 </head>
 <body class="min-h-screen flex flex-col justify-between pb-24">
 
-  <!-- ================= 登入畫面 (高對比大字) ================= -->
+  <!-- ================= 登入畫面 ================= -->
   <div id="loginSection" class="min-h-screen flex items-center justify-center p-4">
     <div class="w-full max-w-md bg-[#162429] border-2 border-teal-600/40 rounded-2xl p-6 sm:p-8 shadow-2xl">
       <div class="text-center mb-6">
@@ -56,7 +65,10 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
           </svg>
         </div>
-        <h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-wide">太平山活動管理</h1>
+        <div class="flex items-center justify-center gap-2">
+          <h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-wide">太平山活動管理</h1>
+          <span class="px-2 py-0.5 text-xs font-mono font-bold bg-teal-950 text-teal-300 border border-teal-600 rounded">v1.01</span>
+        </div>
         <p class="text-teal-300 text-lg mt-1 font-medium">現場工作人員報到入口</p>
       </div>
 
@@ -84,12 +96,14 @@
 
   <!-- ================= 主操作介面 ================= -->
   <div id="mainSection" class="hidden flex-1 flex flex-col">
-    <!-- 頂部資訊列 -->
     <header class="bg-[#142226] border-b-2 border-teal-500/40 px-4 py-3 sticky top-0 z-30 flex items-center justify-between">
       <div class="flex items-center gap-3">
         <div class="w-3.5 h-3.5 rounded-full bg-emerald-400 ring-4 ring-emerald-900/60 animate-pulse"></div>
         <div>
-          <h2 class="text-xl font-bold text-white tracking-wide">太平山報到處</h2>
+          <div class="flex items-center gap-2">
+            <h2 class="text-xl font-bold text-white tracking-wide">太平山報到處</h2>
+            <span class="px-1.5 py-0.2 text-xs font-mono font-bold bg-teal-900/80 text-teal-300 border border-teal-600 rounded">v1.01</span>
+          </div>
           <p class="text-sm text-teal-300 font-semibold" id="connStatusText">● 系統已就緒</p>
         </div>
       </div>
@@ -103,15 +117,12 @@
       </div>
     </header>
 
-    <!-- 主體內容區塊 -->
     <main class="flex-1 max-w-xl w-full mx-auto p-4 space-y-4">
-
-      <!-- 相機掃描視窗卡片 -->
+      <!-- 相機掃描視窗 -->
       <div class="bg-[#162429] border-2 border-teal-500/50 rounded-2xl p-4 shadow-xl">
         <div class="relative bg-black rounded-xl overflow-hidden min-h-[300px] flex flex-col items-center justify-center border border-gray-700">
           <div id="qr-reader" class="w-full h-[320px]"></div>
           
-          <!-- 相機未啟動時的提示覆蓋層 -->
           <div id="cameraStandby" class="absolute inset-0 bg-[#0c1619] flex flex-col items-center justify-center p-6 text-center z-10">
             <svg class="w-20 h-20 text-teal-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
@@ -129,13 +140,10 @@
           <button id="stopScanBtn" class="flex-1 h-12 bg-gray-800 text-gray-200 border border-gray-600 text-lg font-bold rounded-xl hidden">
             暫停相機
           </button>
-          <button id="switchCamBtn" class="flex-1 h-12 bg-gray-800 text-teal-300 border border-teal-700 text-lg font-bold rounded-xl hidden">
-            切換鏡頭
-          </button>
         </div>
       </div>
 
-      <!-- 手動輸入序號輔助卡片（專為掃不到時備用） -->
+      <!-- 手動輸入序號 -->
       <div class="bg-[#162429] border border-gray-700 rounded-2xl p-4 shadow-md">
         <label class="block text-gray-200 text-lg font-bold mb-2">
           🔍 手機掃不到？請直接輸入 12 碼編號：
@@ -149,7 +157,7 @@
         </div>
       </div>
 
-      <!-- 即時報到成功名單卡片 -->
+      <!-- 即時名單 -->
       <div class="bg-[#162429] border border-gray-700 rounded-2xl p-4 shadow-md">
         <div class="flex items-center justify-between mb-3 border-b border-gray-700 pb-2">
           <span class="text-xl font-bold text-white flex items-center gap-2">
@@ -163,29 +171,24 @@
       </div>
     </main>
 
-    <!-- 手機底部固定大操作欄 (方便單手大拇指觸控) -->
+    <!-- 底部固定導航 -->
     <nav class="fixed bottom-0 left-0 right-0 bg-[#0d171a] border-t-2 border-teal-500/40 p-2.5 flex gap-2 max-w-xl mx-auto z-20">
       <button id="footerScanBtn" class="flex-1 h-14 bg-teal-500 active:bg-teal-600 text-slate-950 text-xl font-black rounded-xl flex items-center justify-center gap-1 shadow-lg">
         📷 開啟相機
       </button>
       <button id="footerClearBtn" class="w-36 h-14 bg-gray-800 border border-gray-600 text-gray-200 text-lg font-bold rounded-xl flex items-center justify-center">
-        清空紀錄
+        清空名單
       </button>
     </nav>
   </div>
 
-  <!-- ================= 核銷結果彈出大視窗 (大字無障礙) ================= -->
+  <!-- 核銷結果彈窗 -->
   <div id="resultModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
     <div class="modal-enter w-full max-w-md bg-[#162429] border-4 rounded-3xl p-6 text-center shadow-2xl relative" id="modalContainer">
-      <!-- 狀態圖示 -->
-      <div id="modalIcon" class="w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-3 text-4xl">
-      </div>
-      <!-- 標題 -->
+      <div id="modalIcon" class="w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-3 text-4xl"></div>
       <h3 id="modalTitle" class="text-3xl font-black text-white mb-2"></h3>
-      <!-- 提示訊息 -->
       <p id="modalMsg" class="text-xl text-gray-300 mb-4 font-semibold"></p>
 
-      <!-- 報名者詳細卡片 (超大字) -->
       <div id="modalDetails" class="bg-[#0c1619] border-2 border-gray-700 rounded-2xl p-4 text-left space-y-2 mb-6">
         <div class="flex justify-between items-center text-xl">
           <span class="text-gray-400 font-bold">姓名：</span>
@@ -205,7 +208,6 @@
         </div>
       </div>
 
-      <!-- 底部大按鈕 -->
       <button id="modalContinueBtn"
         class="w-full h-16 bg-teal-400 active:bg-teal-500 text-black text-2xl font-black rounded-2xl shadow-xl flex items-center justify-center gap-2">
         👉 繼續下一位報到
@@ -213,10 +215,10 @@
     </div>
   </div>
 
-  <!-- ================= 設定後端 Apps Script Web App 視窗 ================= -->
+  <!-- 後端設定彈窗 -->
   <div id="configModal" class="hidden fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
     <div class="modal-enter w-full max-w-lg bg-[#162429] border-2 border-teal-500 rounded-3xl p-6">
-      <h3 class="text-2xl font-black text-white mb-3">⚙️ 系統 API 串接設定</h3>
+      <h3 class="text-2xl font-black text-white mb-3">⚙️ 系統 API 串接設定 (v1.01)</h3>
       <p class="text-gray-300 text-base mb-4 leading-relaxed">
         請貼上您在 Google 試算表部署的 <b>Apps Script 網頁應用程式網址 (Web App URL)</b>：
       </p>
@@ -224,7 +226,7 @@
       <div class="space-y-3 mb-5">
         <div>
           <label class="block text-gray-300 text-base font-bold mb-1">試算表 ID：</label>
-          <input type="text" id="cfgSpreadsheetId" readonly value="1zJkGLtCQC1ZZPbQGJiQkxSWec2wRtlKA1pGfmoHaDEY"
+          <input type="text" readonly value="1zJkGLtCQC1ZZPbQGJiQkxSWec2wRtlKA1pGfmoHaDEY"
             class="w-full h-12 px-3 bg-gray-900 border border-gray-700 rounded-xl text-gray-400 text-base font-mono" />
         </div>
         <div>
@@ -246,13 +248,11 @@
   </div>
 
   <script>
-    // --- 系統設定變數 ---
-    const DEFAULT_ID = "1zJkGLtCQC1ZZPbQGJiQkxSWec2wRtlKA1pGfmoHaDEY";
+    const FRONTEND_VERSION = "v1.01";
     let html5QrScanner = null;
     let isProcessing = false;
     let checkinList = [];
 
-    // --- 介面元件 ---
     const loginSection = document.getElementById("loginSection");
     const mainSection = document.getElementById("mainSection");
     const loginForm = document.getElementById("loginForm");
@@ -272,11 +272,9 @@
     const cfgAppUrl = document.getElementById("cfgAppUrl");
     const connStatusText = document.getElementById("connStatusText");
 
-    // 載入已儲存的 Web App 網址
     let apiUrl = localStorage.getItem("tps_gas_url") || "";
     if (apiUrl) cfgAppUrl.value = apiUrl;
 
-    // 1. 登入邏輯
     loginForm.addEventListener("submit", (e) => {
       e.preventDefault();
       const u = document.getElementById("usernameInput").value.trim();
@@ -298,7 +296,6 @@
       loginSection.classList.remove("hidden");
     });
 
-    // 2. 相機掃描啟動 / 關閉
     startScanBtn.addEventListener("click", startCamera);
     footerScanBtn.addEventListener("click", startCamera);
     stopScanBtn.addEventListener("click", stopCamera);
@@ -319,7 +316,7 @@
           { facingMode: "environment" },
           config,
           onScanSuccess,
-          () => {} // 忽略每幀未辨識到的錯誤
+          () => {}
         );
       } catch (err) {
         alert("無法啟動相機，請檢查瀏覽器相機權限是否已開啟！\n" + err);
@@ -340,7 +337,6 @@
       stopScanBtn.classList.add("hidden");
     }
 
-    // 掃描成功觸發
     function onScanSuccess(decodedText) {
       if (isProcessing) return;
       isProcessing = true;
@@ -348,7 +344,6 @@
       verifyCheckinCode(decodedText.trim());
     }
 
-    // 手動序號輸入查詢
     manualVerifyBtn.addEventListener("click", () => {
       const code = manualCodeInput.value.trim().toUpperCase();
       if (!code) {
@@ -360,13 +355,11 @@
       verifyCheckinCode(code);
     });
 
-    // 3. 與後端 Apps Script 連線核銷
     async function verifyCheckinCode(code) {
       apiUrl = localStorage.getItem("tps_gas_url") || "";
 
-      // 若尚未設定 Apps Script 網址，跳出提示
       if (!apiUrl) {
-        alert("請先點擊右上角 ⚙️ 設定您的 Apps Script Web App 網址，才能與 Google 試算表即時連線！");
+        alert("請先點擊右上角 ⚙️ 設定您的 Apps Script Web App 網址！");
         configModal.classList.remove("hidden");
         isProcessing = false;
         return;
@@ -375,23 +368,20 @@
       showLoadingModal(code);
 
       try {
-        // 使用 text/plain 發送避免觸發 CORS preflight OPTIONS
         const response = await fetch(apiUrl, {
           method: "POST",
           headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify({ code: code })
+          body: JSON.stringify({ code: code, clientVersion: FRONTEND_VERSION })
         });
         const result = await response.json();
         handleVerificationResult(result, code);
       } catch (error) {
         console.error("連線錯誤:", error);
-        // 若連線失敗，彈出錯誤提示
-        showModalUI("error", "連線失敗", "無法連接至試算表，請確認網路或 API 網址設定！", { code: code });
+        showModalUI("error", "連線失敗", "無法連接至試算表，請確認網路或 API 網址！", { code: code });
         speakText("連線失敗，請重試");
       }
     }
 
-    // 處理核銷回傳結果
     function handleVerificationResult(res, code) {
       if (res.status === "success") {
         showModalUI("success", "報到成功！", "已順利更新試算表報到狀態", res);
@@ -410,7 +400,6 @@
       }
     }
 
-    // 4. 彈窗 UI 控制
     function showLoadingModal(code) {
       resultModal.classList.remove("hidden");
       modalContainer.className = "modal-enter w-full max-w-md bg-[#162429] border-4 border-teal-500 rounded-3xl p-6 text-center shadow-2xl relative";
@@ -453,7 +442,6 @@
       isProcessing = false;
     });
 
-    // 5. 紀錄清單顯示
     function addHistoryItem(name, code, time, type) {
       document.getElementById("noHistoryText")?.classList.add("hidden");
       const div = document.createElement("div");
@@ -485,7 +473,6 @@
       }
     });
 
-    // 6. 設定對話框
     document.getElementById("openConfigBtn").addEventListener("click", () => {
       configModal.classList.remove("hidden");
     });
@@ -515,7 +502,6 @@
       }
     }
 
-    // 7. 語音朗讀與震動回饋 (適合長者無障礙體驗)
     function speakText(text) {
       if ("speechSynthesis" in window) {
         const utter = new SpeechSynthesisUtterance(text);
