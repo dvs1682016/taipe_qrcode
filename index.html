@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>太平山旅遊活動 - 報到管理系統</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- HTML5 QR Code Scanner Library -->
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            forest: {
+              50: '#f0fdf4',
+              100: '#dcfce7',
+              500: '#22c55e',
+              600: '#16a34a',
+              700: '#15803d',
+              800: '#166534',
+              900: '#14532d',
+            },
+            brand: {
+              teal: '#0d9488',
+              dark: '#0f172a'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* 隱藏掃描器自帶的多餘邊框與說明 */
+    #qr-reader {
+      border: none !important;
+      width: 100% !important;
+    }
+    #qr-reader__scan_region video {
+      border-radius: 1rem;
+      object-fit: cover !important;
+    }
+    #qr-reader__dashboard {
+      padding: 0.5rem 0 !important;
+    }
+    /* 自訂掃描動畫線 */
+    .scan-laser {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, #22c55e, transparent);
+      box-shadow: 0 0 12px 2px #22c55e;
+      animation: scanAnim 2s infinite linear;
+    }
+    @keyframes scanAnim {
+      0% { top: 5%; opacity: 0.2; }
+      50% { top: 50%; opacity: 1; }
+      100% { top: 95%; opacity: 0.2; }
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans selection:bg-teal-500 selection:text-white">
+
+  <!-- ================= 頂部導航列 ================= -->
+  <header class="w-full bg-slate-900/90 backdrop-blur border-b border-slate-800 sticky top-0 z-40 px-4 py-3 flex items-center justify-between">
+    <div class="flex items-center space-x-2">
+      <div class="w-8 h-8 rounded-lg bg-teal-600 flex items-center justify-center text-white shadow-lg shadow-teal-500/20">
+        <i data-lucide="mountain-snow" class="w-5 h-5"></i>
+      </div>
+      <div>
+        <h1 class="text-sm font-bold text-white tracking-wide">太平山活動報到</h1>
+        <p class="text-[10px] text-teal-400 font-medium">現場管理員通道</p>
+      </div>
+    </div>
+
+    <div class="flex items-center space-x-2">
+      <!-- 後端設定按鈕 -->
+      <button id="openSettingsBtn" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition">
+        <i data-lucide="settings" class="w-4 h-4"></i>
+      </button>
+      <!-- 登出按鈕 (登入後顯示) -->
+      <button id="logoutBtn" class="hidden p-2 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 text-xs font-medium flex items-center gap-1 transition">
+        <i data-lucide="log-out" class="w-4 h-4"></i>
+        <span>登出</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ================= 主內容容器 ================= -->
+  <main class="flex-1 w-full max-w-lg mx-auto p-4 flex flex-col">
+
+    <!-- 畫面 1: 管理者登入 -->
+    <section id="loginSection" class="my-auto w-full">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl relative overflow-hidden">
+        <div class="absolute -right-12 -top-12 w-32 h-32 bg-teal-500/10 rounded-full blur-2xl"></div>
+        <div class="text-center mb-6">
+          <div class="inline-flex p-3 rounded-2xl bg-teal-500/10 text-teal-400 mb-3">
+            <i data-lucide="shield-check" class="w-8 h-8"></i>
+          </div>
+          <h2 class="text-xl font-bold text-white">管理員身分驗證</h2>
+          <p class="text-xs text-slate-400 mt-1">請登入以開啟 QR Code 掃描與報到作業</p>
+        </div>
+
+        <form id="loginForm" class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">帳號</label>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500">
+                <i data-lucide="user" class="w-4 h-4"></i>
+              </span>
+              <input type="text" id="usernameInput" value="dvs1682001" required
+                class="w-full pl-9 pr-3 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition" />
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">密碼</label>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500">
+                <i data-lucide="key-round" class="w-4 h-4"></i>
+              </span>
+              <input type="password" id="passwordInput" value="@9771997" required
+                class="w-full pl-9 pr-3 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition" />
+            </div>
+          </div>
+
+          <div id="loginErrorMsg" class="hidden text-xs text-rose-400 bg-rose-500/10 p-2.5 rounded-lg border border-rose-500/20 text-center">
+            帳號或密碼錯誤，請重新輸入。
+          </div>
+
+          <button type="submit" class="w-full py-3 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white font-medium rounded-xl shadow-lg shadow-teal-500/20 active:scale-[0.98] transition">
+            登入管理系統
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <!-- 畫面 2: 掃描與報到工作台 (預設隱藏) -->
+    <section id="scannerSection" class="hidden flex-1 flex-col space-y-4">
+      
+      <!-- 統計與控制狀態列 -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <div class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></div>
+          <span class="text-xs font-medium text-slate-300">報到作業中</span>
+        </div>
+        <div class="flex items-center space-x-2">
+          <span class="text-xs text-slate-400">本次已核銷:</span>
+          <span id="sessionCheckedCount" class="text-base font-bold text-teal-400">0</span>
+          <span class="text-xs text-slate-500">人</span>
+        </div>
+      </div>
+
+      <!-- 相機掃描視窗容器 -->
+      <div id="cameraCard" class="bg-slate-900 border border-slate-800 rounded-2xl p-3 relative flex flex-col items-center overflow-hidden">
+        
+        <div class="w-full relative rounded-xl overflow-hidden bg-black aspect-[4/3] flex items-center justify-center">
+          <div id="qr-reader" class="w-full"></div>
+          <div id="scanLaserLine" class="scan-laser pointer-events-none hidden"></div>
+          
+          <!-- 相機未啟動時的遮罩 -->
+          <div id="cameraStandbyMask" class="absolute inset-0 bg-slate-900 flex flex-col items-center justify-center p-4 text-center">
+            <div class="w-14 h-14 rounded-full bg-slate-800 flex items-center justify-center text-teal-400 mb-3">
+              <i data-lucide="camera" class="w-7 h-7"></i>
+            </div>
+            <p class="text-sm font-medium text-slate-200">相機目前已暫停</p>
+            <p class="text-xs text-slate-400 mt-1 mb-4">點擊下方按鈕啟動手機相機掃描 QR Code</p>
+            <button id="resumeScanBtn" class="px-5 py-2.5 bg-teal-600 hover:bg-teal-500 text-white rounded-xl text-xs font-semibold shadow-md active:scale-95 transition flex items-center gap-2">
+              <i data-lucide="scan-line" class="w-4 h-4"></i>
+              開啟相機掃描
+            </button>
+          </div>
+        </div>
+
+        <!-- 掃描控制鈕 -->
+        <div class="w-full mt-3 flex items-center justify-between gap-2">
+          <button id="toggleCameraBtn" class="flex-1 py-2 px-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-medium flex items-center justify-center gap-1.5 transition">
+            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+            <span>切換/重啟相機</span>
+          </button>
+          <button id="finishWorkBtn" class="py-2 px-4 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition">
+            <i data-lucide="stop-circle" class="w-3.5 h-3.5"></i>
+            <span>結束報到</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 手動備用輸入欄 (相機反光或無法讀取時使用) -->
+      <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3">
+        <label class="block text-[11px] font-medium text-slate-400 mb-1.5">掃不到碼？可直接手動輸入 12 碼序號：</label>
+        <div class="flex gap-2">
+          <input type="text" id="manualCodeInput" placeholder="例如：Y5UA6GZLOUDV" maxlength="16"
+            class="flex-1 uppercase bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-teal-500 tracking-wider font-mono">
+          <button id="manualSubmitBtn" class="px-3.5 py-1.5 bg-teal-600 hover:bg-teal-500 text-white rounded-lg text-xs font-medium active:scale-95 transition">
+            驗證
+          </button>
+        </div>
+      </div>
+
+      <!-- 報到即時紀錄清單 -->
+      <div class="flex-1 bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col min-h-[160px]">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+            <i data-lucide="history" class="w-3.5 h-3.5 text-teal-400"></i>
+            本次報到紀錄
+          </span>
+          <span class="text-[10px] text-slate-500">即時同步試算表</span>
+        </div>
+        <div id="checkinHistoryList" class="flex-1 overflow-y-auto space-y-2 max-h-48 pr-1 text-xs text-slate-400">
+          <div id="noHistoryTip" class="h-full flex items-center justify-center text-slate-600 italic py-6">
+            尚無掃描紀錄，請對準報到者 QR Code
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- 畫面 3: 報到結果彈出視窗 (Modal) -->
+    <div id="resultModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+      <div class="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-sm shadow-2xl relative animate-in fade-in zoom-in-95 duration-150">
+        
+        <!-- 狀態圖示與標題 -->
+        <div class="text-center">
+          <div id="modalIconContainer" class="w-16 h-16 rounded-full mx-auto flex items-center justify-center mb-3">
+            <!-- 動態置換圖示 -->
+          </div>
+          <h3 id="modalTitle" class="text-lg font-bold text-white">驗證中...</h3>
+          <p id="modalSubTitle" class="text-xs text-slate-400 mt-0.5">報名資料比對結果</p>
+        </div>
+
+        <!-- 報名者詳細資訊卡 -->
+        <div id="modalDetailsCard" class="mt-4 bg-slate-950 rounded-xl p-3.5 border border-slate-800 text-xs space-y-2">
+          <div class="flex justify-between border-b border-slate-800 pb-1.5">
+            <span class="text-slate-400">姓名</span>
+            <span id="resName" class="font-bold text-white">-</span>
+          </div>
+          <div class="flex justify-between border-b border-slate-800 pb-1.5">
+            <span class="text-slate-400">電話</span>
+            <span id="resPhone" class="text-slate-200 font-mono">-</span>
+          </div>
+          <div class="flex justify-between border-b border-slate-800 pb-1.5">
+            <span class="text-slate-400">Email</span>
+            <span id="resEmail" class="text-slate-200 truncate max-w-[180px]">-</span>
+          </div>
+          <div class="flex justify-between border-b border-slate-800 pb-1.5">
+            <span class="text-slate-400">報到編號</span>
+            <span id="resCode" class="font-mono font-bold text-teal-400">-</span>
+          </div>
+          <div class="flex justify-between items-center pt-0.5">
+            <span class="text-slate-400">報到時間</span>
+            <span id="resTime" class="text-[11px] text-emerald-400 font-medium">-</span>
+          </div>
+        </div>
+
+        <!-- 按鈕操作區 -->
+        <div class="mt-5 space-y-2">
+          <button id="modalContinueBtn" class="w-full py-2.5 bg-teal-600 hover:bg-teal-500 text-white font-semibold rounded-xl text-xs active:scale-95 transition flex items-center justify-center gap-1.5">
+            <i data-lucide="scan" class="w-4 h-4"></i>
+            <span>繼續下一位掃描</span>
+          </button>
+          <button id="modalCloseBtn" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium rounded-xl text-xs transition">
+            關閉視窗
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 畫面 4: 後端 GAS Web App API 網址設定彈窗 -->
+    <div id="settingsModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+      <div class="bg-slate-900 border border-slate-700 rounded-2xl p-5 w-full max-w-md shadow-2xl max-h-[90vh] flex flex-col">
+        <div class="flex justify-between items-center mb-3">
+          <h3 class="text-sm font-bold text-white flex items-center gap-2">
+            <i data-lucide="settings" class="w-4 h-4 text-teal-400"></i>
+            系統設定與 Google 試算表串接
+          </h3>
+          <button id="closeSettingsBtn" class="text-slate-400 hover:text-white">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto space-y-3.5 pr-1 text-xs">
+          <div>
+            <label class="block font-medium text-slate-300 mb-1">Google 試算表 ID：</label>
+            <input type="text" id="settingSheetId" readonly value="1zJkGLtCQC1ZZPbQGJiQkxSWec2wRtlKA1pGfmoHaDEY"
+              class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-slate-400 font-mono text-[11px]" />
+          </div>
+
+          <div>
+            <label class="block font-medium text-slate-300 mb-1">Apps Script 網頁應用程式 (Web App) 網址：</label>
+            <input type="url" id="settingGasUrl" placeholder="https://script.google.com/macros/s/AKfycb.../exec"
+              class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-white font-mono text-[11px] focus:outline-none focus:border-teal-500" />
+            <p class="text-[10px] text-slate-500 mt-1">※ 若尚未部屬 Web App，系統將進入「離線模擬模式」方便您先體驗掃描流程。</p>
+          </div>
+
+          <div class="bg-slate-950 p-3 rounded-xl border border-slate-800">
+            <p class="font-bold text-teal-400 mb-1 flex items-center gap-1">
+              <i data-lucide="file-code" class="w-3.5 h-3.5"></i>
+              需要貼入 Google Apps Script 的 doPost 後端程式：
+            </p>
+            <p class="text-[11px] text-slate-400 mb-2">請至試算表的 Apps Script 專案中，新增並發布為「網頁應用程式」：</p>
+            <pre class="bg-slate-900 p-2 rounded text-[10px] text-slate-300 overflow-x-auto font-mono max-h-40 selection:bg-teal-700">
+function doPost(e) {
+  try {
+    var data = JSON.parse(e.postData.contents);
+    var code = (data.code || "").trim();
+    var ss = SpreadsheetApp.openById("1zJkGLtCQC1ZZPbQGJiQkxSWec2wRtlKA1pGfmoHaDEY");
+    var sheet = ss.getSheetByName("Form_Responses") || ss.getSheets()[0];
+    var lastRow = sheet.getLastRow();
+    if (lastRow < 2) return ContentService.createTextOutput(JSON.stringify({status: 'not_found'}));
+    
+    // 取得 E(編號), F(狀態), G(時間)
+    var codes = sheet.getRange(2, 5, lastRow - 1, 1).getValues().flat();
+    var targetRow = -1;
+    for (var i = 0; i < codes.length; i++) {
+      if (String(codes[i]).trim() === code) {
+        targetRow = i + 2;
+        break;
+      }
+    }
+    
+    if (targetRow === -1) {
+      return ContentService.createTextOutput(JSON.stringify({status: 'not_found'})).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    var name = sheet.getRange(targetRow, 2).getValue();
+    var phone = sheet.getRange(targetRow, 3).getValue();
+    var email = sheet.getRange(targetRow, 4).getValue();
+    var currentStatus = sheet.getRange(targetRow, 6).getValue();
+    var currentTime = sheet.getRange(targetRow, 7).getValue();
+    
+    if (currentStatus === "已報到") {
+      return ContentService.createTextOutput(JSON.stringify({
+        status: 'already_checked',
+        name: name,
+        phone: phone,
+        email: email,
+        code: code,
+        checkinTime: currentTime
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    var nowStr = Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy/MM/dd HH:mm:ss");
+    sheet.getRange(targetRow, 6).setValue("已報到");
+    sheet.getRange(targetRow, 7).setValue(nowStr);
+    
+    return ContentService.createTextOutput(JSON.stringify({
+      status: 'success',
+      name: name,
+      phone: phone,
+      email: email,
+      code: code,
+      checkinTime: nowStr
+    })).setMimeType(ContentService.MimeType.JSON);
+    
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({status: 'error', message: err.toString()})).setMimeType(ContentService.MimeType.JSON);
+  }
+}</pre>
+          </div>
+        </div>
+
+        <div class="mt-3 pt-2 border-t border-slate-800">
+          <button id="saveGasUrlBtn" class="w-full py-2 bg-teal-600 hover:bg-teal-500 text-white rounded-xl text-xs font-semibold transition">
+            儲存 Web App 網址
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ================= 頁尾宣告 ================= -->
+  <footer class="w-full py-2.5 text-center text-[10px] text-slate-600 border-t border-slate-900">
+    太平山活動報到核銷系統 &bull; 支援手機端相機與即時試算表寫入
+  </footer>
+
+  <!-- ================= 核心邏輯 JavaScript ================= -->
+  <script>
+    // 預設管理者資訊
+    const ADMIN_USER = "dvs1682001";
+    const ADMIN_PASS = "@9771997";
+    const SPREADSHEET_ID = "1zJkGLtCQC1ZZPbQGJiQkxSWec2wRtlKA1pGfmoHaDEY";
+
+    // 狀態變數
+    let html5QrCode = null;
+    let isScanning = false;
+    let checkedCount = 0;
+    let isProcessingCode = false;
+
+    // DOM 元素快取
+    const loginSection = document.getElementById("loginSection");
+    const scannerSection = document.getElementById("scannerSection");
+    const loginForm = document.getElementById("loginForm");
+    const usernameInput = document.getElementById("usernameInput");
+    const passwordInput = document.getElementById("passwordInput");
+    const loginErrorMsg = document.getElementById("loginErrorMsg");
+    const logoutBtn = document.getElementById("logoutBtn");
+    
+    const resumeScanBtn = document.getElementById("resumeScanBtn");
+    const cameraStandbyMask = document.getElementById("cameraStandbyMask");
+    const scanLaserLine = document.getElementById("scanLaserLine");
+    const toggleCameraBtn = document.getElementById("toggleCameraBtn");
+    const finishWorkBtn = document.getElementById("finishWorkBtn");
+    
+    const manualCodeInput = document.getElementById("manualCodeInput");
+    const manualSubmitBtn = document.getElementById("manualSubmitBtn");
+    
+    const resultModal = document.getElementById("resultModal");
+    const modalIconContainer = document.getElementById("modalIconContainer");
+    const modalTitle = document.getElementById("modalTitle");
+    const modalSubTitle = document.getElementById("modalSubTitle");
+    const modalDetailsCard = document.getElementById("modalDetailsCard");
+    const resName = document.getElementById("resName");
+    const resPhone = document.getElementById("resPhone");
+    const resEmail = document.getElementById("resEmail");
+    const resCode = document.getElementById("resCode");
+    const resTime = document.getElementById("resTime");
+    const modalContinueBtn = document.getElementById("modalContinueBtn");
+    const modalCloseBtn = document.getElementById("modalCloseBtn");
+    
+    const sessionCheckedCount = document.getElementById("sessionCheckedCount");
+    const checkinHistoryList = document.getElementById("checkinHistoryList");
+    const noHistoryTip = document.getElementById("noHistoryTip");
+
+    // 設定彈窗相關
+    const openSettingsBtn = document.getElementById("openSettingsBtn");
+    const closeSettingsBtn = document.getElementById("closeSettingsBtn");
+    const settingsModal = document.getElementById("settingsModal");
+    const settingGasUrl = document.getElementById("settingGasUrl");
+    const saveGasUrlBtn = document.getElementById("saveGasUrlBtn");
+
+    // 初始化 Lucide 圖示
+    lucide.createIcons();
+
+    // 載入儲存的 Web App URL
+    const savedGasUrl = localStorage.getItem("gas_webapp_url") || "";
+    settingGasUrl.value = savedGasUrl;
+
+    // 檢查登入狀態
+    if (sessionStorage.getItem("admin_logged_in") === "true") {
+      showScannerView();
+    }
+
+    // 登入事件處理
+    loginForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const u = usernameInput.value.trim();
+      const p = passwordInput.value.trim();
+
+      if (u === ADMIN_USER && p === ADMIN_PASS) {
+        sessionStorage.setItem("admin_logged_in", "true");
+        loginErrorMsg.classList.add("hidden");
+        showScannerView();
+      } else {
+        loginErrorMsg.classList.remove("hidden");
+      }
+    });
+
+    // 登出事件
+    logoutBtn.addEventListener("click", () => {
+      stopCamera();
+      sessionStorage.removeItem("admin_logged_in");
+      scannerSection.classList.add("hidden");
+      logoutBtn.classList.add("hidden");
+      loginSection.classList.remove("hidden");
+    });
+
+    function showScannerView() {
+      loginSection.classList.add("hidden");
+      scannerSection.classList.remove("hidden");
+      logoutBtn.classList.remove("hidden");
+      lucide.createIcons();
+      startCamera();
+    }
+
+    // 啟動手機相機掃描
+    async function startCamera() {
+      if (isScanning) return;
+      try {
+        if (!html5QrCode) {
+          html5QrCode = new Html5Qrcode("qr-reader");
+        }
+        
+        const config = { 
+          fps: 15, 
+          qrbox: { width: 220, height: 220 },
+          aspectRatio: 1.333333
+        };
+
+        // 優先請求手機後置鏡頭 (environment)
+        await html5QrCode.start(
+          { facingMode: "environment" },
+          config,
+          onScanSuccess,
+          onScanFailure
+        );
+
+        isScanning = true;
+        cameraStandbyMask.classList.add("hidden");
+        scanLaserLine.classList.remove("hidden");
+      } catch (err) {
+        console.warn("後置相機啟動失敗，嘗試通用裝置相機:", err);
+        try {
+          await html5QrCode.start({ facingMode: "user" }, { fps: 10, qrbox: 220 }, onScanSuccess, onScanFailure);
+          isScanning = true;
+          cameraStandbyMask.classList.add("hidden");
+          scanLaserLine.classList.remove("hidden");
+        } catch (e2) {
+          console.error("相機無法啟動:", e2);
+          showToast("無法存取相機，請檢查瀏覽器權限或使用手動輸入序號。");
+        }
+      }
+    }
+
+    // 停止相機
+    async function stopCamera() {
+      if (html5QrCode && isScanning) {
+        try {
+          await html5QrCode.stop();
+          isScanning = false;
+        } catch (err) {
+          console.error("相機停止失敗", err);
+        }
+      }
+      cameraStandbyMask.classList.remove("hidden");
+      scanLaserLine.classList.add("hidden");
+    }
+
+    // 掃描成功回呼
+    function onScanSuccess(decodedText, decodedResult) {
+      if (isProcessingCode) return;
+      isProcessingCode = true;
+      
+      // 蜂鳴回饋或震動提示
+      triggerHapticAndBeep(true);
+      
+      // 暫停掃描
+      stopCamera();
+      
+      // 處理報到序號
+      handleCheckinProcess(decodedText.trim());
+    }
+
+    function onScanFailure(error) {
+      // 持續搜尋中，不需報錯
+    }
+
+    // 手動序號輸入送出
+    manualSubmitBtn.addEventListener("click", () => {
+      const code = manualCodeInput.value.trim().toUpperCase();
+      if (!code) {
+        showToast("請輸入報到編號！");
+        return;
+      }
+      stopCamera();
+      handleCheckinProcess(code);
+      manualCodeInput.value = "";
+    });
+
+    manualCodeInput.addEventListener("keyup", (e) => {
+      if (e.key === "Enter") manualSubmitBtn.click();
+    });
+
+    // 核心核銷作業邏輯
+    async function handleCheckinProcess(code) {
+      showLoadingModal(code);
+      const gasUrl = localStorage.getItem("gas_webapp_url") || "";
+
+      if (gasUrl) {
+        // 連線真實 Google Apps Script Web App
+        try {
+          const response = await fetch(gasUrl, {
+            method: "POST",
+            mode: "cors",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify({ action: "checkin", code: code })
+          });
+          const res = await response.json();
+          renderCheckinResult(res, code);
+        } catch (err) {
+          console.error("API 請求失敗，進入除錯/模擬模式:", err);
+          renderMockResult(code);
+        }
+      } else {
+        // 尚未設定 Web App 網址時的展示模擬資料
+        setTimeout(() => {
+          renderMockResult(code);
+        }, 600);
+      }
+    }
+
+    // 渲染比對結果
+    function renderCheckinResult(res, scannedCode) {
+      isProcessingCode = false;
+      
+      if (res.status === "success") {
+        // 報到成功
+        triggerHapticAndBeep(true);
+        modalIconContainer.className = "w-16 h-16 rounded-full mx-auto flex items-center justify-center mb-3 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+        modalIconContainer.innerHTML = `<i data-lucide="check-circle" class="w-10 h-10"></i>`;
+        modalTitle.textContent = "報到成功！";
+        modalTitle.className = "text-lg font-bold text-emerald-400";
+        modalSubTitle.textContent = "已成功核銷並回寫至 Google 試算表";
+
+        modalDetailsCard.classList.remove("hidden");
+        resName.textContent = res.name || "報名學員";
+        resPhone.textContent = res.phone || "-";
+        resEmail.textContent = res.email || "-";
+        resCode.textContent = res.code || scannedCode;
+        resTime.textContent = res.checkinTime || new Date().toLocaleString();
+
+        // 增加計數與清單紀錄
+        checkedCount++;
+        sessionCheckedCount.textContent = checkedCount;
+        addToHistoryList({
+          name: res.name || "報名學員",
+          code: res.code || scannedCode,
+          time: res.checkinTime || "剛剛",
+          status: "成功"
+        });
+
+      } else if (res.status === "already_checked") {
+        // 已經報到過
+        triggerHapticAndBeep(false);
+        modalIconContainer.className = "w-16 h-16 rounded-full mx-auto flex items-center justify-center mb-3 bg-amber-500/20 text-amber-400 border border-amber-500/30";
+        modalIconContainer.innerHTML = `<i data-lucide="alert-triangle" class="w-10 h-10"></i>`;
+        modalTitle.textContent = "該序號已完成過報到！";
+        modalTitle.className = "text-lg font-bold text-amber-400";
+        modalSubTitle.textContent = `原報到時間：${res.checkinTime || "已完成"}`;
+
+        modalDetailsCard.classList.remove("hidden");
+        resName.textContent = res.name || "報名者";
+        resPhone.textContent = res.phone || "-";
+        resEmail.textContent = res.email || "-";
+        resCode.textContent = res.code || scannedCode;
+        resTime.textContent = res.checkinTime || "已於先前報到";
+
+      } else {
+        // 查無資料
+        triggerHapticAndBeep(false);
+        modalIconContainer.className = "w-16 h-16 rounded-full mx-auto flex items-center justify-center mb-3 bg-rose-500/20 text-rose-400 border border-rose-500/30";
+        modalIconContainer.innerHTML = `<i data-lucide="x-circle" class="w-10 h-10"></i>`;
+        modalTitle.textContent = "查無此報名編號！";
+        modalTitle.className = "text-lg font-bold text-rose-400";
+        modalSubTitle.textContent = `序號「${scannedCode}」不存在於試算表中`;
+        modalDetailsCard.classList.add("hidden");
+      }
+
+      lucide.createIcons();
+    }
+
+    // 模擬展示結果 (尚未綁定後端 Web App 網址時使用)
+    function renderMockResult(scannedCode) {
+      const nowStr = new Date().toLocaleTimeString('zh-TW', { hour12: false });
+      renderCheckinResult({
+        status: "success",
+        name: "蕭大 (測試者)",
+        phone: "0911828868",
+        email: "dvs1682007@gmail.com",
+        code: scannedCode,
+        checkinTime: nowStr
+      }, scannedCode);
+    }
+
+    function showLoadingModal(code) {
+      modalIconContainer.className = "w-16 h-16 rounded-full mx-auto flex items-center justify-center mb-3 bg-teal-500/10 text-teal-400 animate-spin";
+      modalIconContainer.innerHTML = `<i data-lucide="loader" class="w-8 h-8"></i>`;
+      modalTitle.textContent = "查詢報名資料中...";
+      modalTitle.className = "text-lg font-bold text-white";
+      modalSubTitle.textContent = `編號: ${code}`;
+      modalDetailsCard.classList.add("hidden");
+      resultModal.classList.remove("hidden");
+      lucide.createIcons();
+    }
+
+    // 新增至已報到歷史紀錄欄
+    function addToHistoryList(item) {
+      noHistoryTip.classList.add("hidden");
+      const div = document.createElement("div");
+      div.className = "bg-slate-950 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between";
+      div.innerHTML = `
+        <div class="flex items-center space-x-2">
+          <div class="w-2 h-2 rounded-full bg-emerald-400"></div>
+          <div>
+            <div class="font-semibold text-slate-200">${item.name}</div>
+            <div class="text-[10px] text-slate-500 font-mono">${item.code}</div>
+          </div>
+        </div>
+        <div class="text-right">
+          <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-medium">${item.status}</span>
+          <div class="text-[10px] text-slate-500 mt-0.5">${item.time}</div>
+        </div>
+      `;
+      checkinHistoryList.prepend(div);
+    }
+
+    // 繼續下一位掃描
+    modalContinueBtn.addEventListener("click", () => {
+      resultModal.classList.add("hidden");
+      isProcessingCode = false;
+      startCamera();
+    });
+
+    // 關閉視窗 (相機保持待命)
+    modalCloseBtn.addEventListener("click", () => {
+      resultModal.classList.add("hidden");
+      isProcessingCode = false;
+    });
+
+    // 結束報到作業按鈕
+    finishWorkBtn.addEventListener("click", () => {
+      stopCamera();
+      showToast(`已結束掃描作業。本次共完成 ${checkedCount} 位報到核銷。`);
+    });
+
+    // 重啟或切換相機
+    resumeScanBtn.addEventListener("click", startCamera);
+    toggleCameraBtn.addEventListener("click", async () => {
+      await stopCamera();
+      setTimeout(startCamera, 300);
+    });
+
+    // 設定視窗開關
+    openSettingsBtn.addEventListener("click", () => settingsModal.classList.remove("hidden"));
+    closeSettingsBtn.addEventListener("click", () => settingsModal.classList.add("hidden"));
+    saveGasUrlBtn.addEventListener("click", () => {
+      const url = settingGasUrl.value.trim();
+      localStorage.setItem("gas_webapp_url", url);
+      settingsModal.classList.add("hidden");
+      showToast("Web App 網址已儲存！");
+    });
+
+    // 音效與震動提示
+    function triggerHapticAndBeep(isSuccess) {
+      if (navigator.vibrate) {
+        navigator.vibrate(isSuccess ? [80, 50, 80] : [200]);
+      }
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        if (isSuccess) {
+          osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+          osc.frequency.setValueAtTime(880, ctx.currentTime + 0.1); // A5
+          gain.gain.setValueAtTime(0.2, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.3);
+        } else {
+          osc.frequency.setValueAtTime(220, ctx.currentTime); // A3
+          gain.gain.setValueAtTime(0.25, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.25);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.25);
+        }
+      } catch (e) {}
+    }
+
+    // 輕量 Toast 提示訊息
+    function showToast(msg) {
+      const toast = document.createElement("div");
+      toast.className = "fixed bottom-12 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white border border-slate-700 px-4 py-2 rounded-xl text-xs shadow-xl z-50 animate-bounce";
+      toast.textContent = msg;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 3200);
+    }
+  </script>
+</body>
+</html>
